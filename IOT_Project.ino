@@ -57,7 +57,7 @@ int wifiRssi = 0;
 String systemStatus = "Starting";
 int httpResponseCode = 0;
 unsigned long totalSamplesSent = 0;
-bool verboseMode = false;  // Control serial output verbosity
+// No verbose mode needed - keep it simple
 
 // --- ESP Resources & Sensor Status ---
 struct ESPResources {
@@ -96,7 +96,7 @@ void connectWiFi() {
   
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println();
-    Serial.printf("WiFi connected: %s\n", WiFi.localIP().toString().c_str());
+    Serial.println("WiFi OK");
     wifiRssi = WiFi.RSSI();
     systemStatus = "WiFi OK";
   } else {
@@ -163,13 +163,7 @@ void sampleSensors() {
     bufferFull = true;
   }
   
-  // Simplified output - only show when needed
-  if (verboseMode || !sensorStat.voltageOK || !sensorStat.currentOK) {
-    Serial.printf("V=%.1f I=%.3f [%s%s]\\n", 
-                  voltageRaw, currentRaw,
-                  sensorStat.voltageOK ? "✓" : "✗V",
-                  sensorStat.currentOK ? "✓" : "✗I");
-  }
+  // No output during sampling - keep it quiet
 }
 
 // --- Calculate Averages ---
@@ -254,18 +248,11 @@ void sendToAPI() {
     totalSamplesSent++;
     systemStatus = "API OK";
     
-    Serial.printf("✓ API: V=%.1f I=%.3f [%d samples sent]\\n", 
-                  avgVoltageRaw, avgCurrentRaw, 
-                  bufferFull ? BUFFER_SIZE : samplesCollected);
-    
-    // Show server response only in verbose mode or if error
-    if (verboseMode || (response.indexOf("error") > 0 || response.indexOf("false") > 0)) {
-      Serial.printf("Server: %s\\n", response.c_str());
-    }
+    Serial.printf("✓ V=%.1f I=%.3f\\n", avgVoltageRaw, avgCurrentRaw);
     
   } else {
     systemStatus = "API Failed";
-    Serial.printf("✗ API Error: %d\\n", httpResponseCode);
+    Serial.printf("✗ Error: %d\\n", httpResponseCode);
   }
   
   http.end();
@@ -414,16 +401,7 @@ void handleSerial() {
     Serial.println("Testing API connection...");
     sendToAPI();
   }
-  else if (input == "V+") {
-    // Enable verbose mode
-    verboseMode = true;
-    Serial.println("✓ Verbose mode ON");
-  }
-  else if (input == "V-") {
-    // Disable verbose mode
-    verboseMode = false;
-    Serial.println("✓ Verbose mode OFF");
-  }
+
   else if (input == "R") {
     // Restart
     Serial.println("Restarting ESP32...");
@@ -435,8 +413,6 @@ void handleSerial() {
     Serial.println("  Ixxx - Current calibration (e.g. I2.5)");
     Serial.println("  S    - System status");
     Serial.println("  T    - Test API");
-    Serial.println("  V+   - Verbose mode ON");
-    Serial.println("  V-   - Verbose mode OFF");
     Serial.println("  R    - Restart ESP32");
   }
 }
@@ -499,9 +475,7 @@ void setup() {
   }
   Serial.println(" Done!");
   
-  Serial.printf("API endpoint: %s\\n", api_endpoint);
-  Serial.printf("Sample: %lums | Send: %lums | Buffer: %d\\n", SAMPLE_INTERVAL, SEND_INTERVAL, BUFFER_SIZE);
-  Serial.println("Ready! Type 'S' for status, 'V+' for verbose mode");
+  Serial.println("Ready! Type 'S' for status");
   
   // Initialize timers
   lastSampleTime = millis();
@@ -517,7 +491,7 @@ void loop() {
   if (now - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
     lastWifiCheck = now;
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("⚠ WiFi lost, reconnecting...");
+      Serial.println("⚠ WiFi lost");
       connectWiFi();
     } else {
       wifiRssi = WiFi.RSSI();
