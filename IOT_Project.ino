@@ -17,6 +17,7 @@
 #include <Adafruit_SSD1306.h>
 #include <EmonLib.h>
 #include <Preferences.h>
+#include <time.h>
 #include "config.h"
 
 // --- WiFi & API Config (from config.h) ---
@@ -24,6 +25,11 @@ const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 const char* api_endpoint = API_ENDPOINT;
 const char* device_id = DEVICE_ID;
+
+// --- Time Config ---
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 7 * 3600; // WIB = UTC+7
+const int daylightOffset_sec = 0;
 
 // --- OLED ---
 Adafruit_SSD1306 disp(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -99,6 +105,10 @@ void connectWiFi() {
     Serial.println("WiFi OK");
     wifiRssi = WiFi.RSSI();
     systemStatus = "WiFi OK";
+    
+    // Setup time with WIB timezone
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    Serial.println("Time synced to WIB");
   } else {
     Serial.println("\\nWiFi connection failed!");
     systemStatus = "WiFi Failed";
@@ -113,6 +123,18 @@ void updateESPResources() {
   espRes.cpuFreq = ESP.getCpuFreqMHz();
   espRes.flashSize = ESP.getFlashChipSize();
   espRes.freeFlash = ESP.getFreeSketchSpace();
+}
+
+// --- Get WIB Timestamp ---
+String getWIBTimestamp() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return ""; // Return empty if time not available
+  }
+  
+  char timeString[30];
+  strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%S", &timeinfo);
+  return String(timeString) + "+07:00"; // WIB timezone
 }
 
 // --- Check Sensor Health ---
@@ -200,7 +222,13 @@ void sendToAPI() {
   StaticJsonDocument<300> doc;
   
   doc["device_id"] = device_id;
-  doc["timestamp"] = millis() - bootTime; // Uptime in ms
+  
+  // Add both WIB timestamp and uptime
+  String wibTime = getWIBTimestamp();
+  if (wibTime.length() > 0) {
+    doc["timestamp"] = wibTime;
+  }
+  doc["uptime_ms"] = millis() - bootTime; // Uptime in ms
   doc["samples_count"] = bufferFull ? BUFFER_SIZE : samplesCollected;
   
   // Raw sensor data (averaged)
