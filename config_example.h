@@ -1,57 +1,70 @@
+//=============================================================================
+// ESP32 Energy Monitor - Configuration File
+//=============================================================================
+
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Configuration file for IoT Energy Meter
-// Edit these values according to your setup
+// WiFi Configuration
+#define WIFI_SSID "your_wifi_ssid"
+#define WIFI_PASSWORD "your_wifi_pass"
 
-// WiFi Configuration - EDIT THESE VALUES
-#ifndef WIFI_SSID
-#define WIFI_SSID "your_wifi_ssid"  // Change to your WiFi SSID
-#endif
+// Server Configuration
+#define SERVER_URL "http://your_endpoint"
+#define DEVICE_ID "ESP32_001"
 
-#ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD "your_wifi_password"  // Change to your WiFi password
-#endif
+//=============================================================================
+// PIN CONFIGURATION - STEP 1: ADD NEW SENSOR PINS HERE
+//=============================================================================
+// Current sensors
+#define ZMPT101B_PIN A0     // Voltage sensor
+#define SCT013_PIN A3       // Current sensor
 
-// API Configuration - EDIT THESE VALUES
-#ifndef API_ENDPOINT
-#define API_ENDPOINT "your_end_point"  // Change to your API endpoint
-#endif
+// I2C pins for display
+#define SDA_PIN 21
+#define SCL_PIN 22
 
-#ifndef DEVICE_ID
-#define DEVICE_ID "your_device_id"  // Change to your device ID
-#endif
+// ADD NEW SENSOR PINS BELOW:
+// Example: #define DHT22_PIN 4
+// Example: #define RELAY_PIN 5
+// Example: #define LED_PIN 2
 
-// Hardware Configuration
-#ifndef PIN_VOLT
-#define PIN_VOLT 35
-#endif
-
-#ifndef PIN_CURR
-#define PIN_CURR 34
-#endif
-
-#ifndef SENSITIVITY
-#define SENSITIVITY 500.0
-#endif
-
-// Calibration Defaults
-#ifndef DEFAULT_VOLT_CAL
-#define DEFAULT_VOLT_CAL 1.0
-#endif
-
-#ifndef DEFAULT_CURR_CAL
-#define DEFAULT_CURR_CAL 111.1
-#endif
-
-// Display Configuration
+//=============================================================================
+// OLED Configuration
+#define OLED_ADDRESS 0x3C
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-// Timing Configuration
-#define SAMPLE_INTERVAL 1000    // Sample every 1 second
-#define SEND_INTERVAL 5000      // Send every 5 seconds
-#define BUFFER_SIZE 5           // 5 samples to average
-#define WIFI_CHECK_INTERVAL 30000  // Check WiFi every 30 seconds
+//=============================================================================
+// SERIAL & DEBUG Configuration
+#define SERIAL_BAUD 115200
+#define DEBUG_ENABLED true    // Set to false to disable serial output
 
-#endif // CONFIG_H
+//=============================================================================
+// TIMING Configuration
+#define SEND_INTERVAL 5000   // How often to send data (milliseconds)
+#define DISPLAY_UPDATE 1000  // How often to update display (milliseconds)
+#define SAMPLES 100          // Number of samples for sensor reading
+
+//=============================================================================
+// SENSOR CALIBRATION & THRESHOLDS - STEP 2: ADD NEW SENSOR CONSTANTS HERE
+//=============================================================================
+// ZMPT101B (Voltage sensor) settings
+#define VOLTAGE_CALIBRATION 250.0  // Adjust based on your setup
+#define ZMPT_THRESHOLD 10          // Minimum variation to detect AC signal
+
+// SCT013 (Current sensor) settings
+#define CURRENT_CALIBRATION 30.0   // Adjust based on your setup
+#define SCT_THRESHOLD 5            // Minimum variation to detect AC signal
+
+// System constants
+#define ADC_REF_VOLTAGE 3.3
+#define ADC_RESOLUTION 4095.0
+#define DC_OFFSET 1.65             // DC offset for AC sensors
+
+// ADD NEW SENSOR CALIBRATIONS BELOW:
+// Example: #define DHT22_TEMP_OFFSET 2.5
+// Example: #define RELAY_ON_THRESHOLD 3.0
+// Example: #define LED_BRIGHTNESS 255
+
+#endif
