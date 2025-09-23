@@ -9,7 +9,7 @@
 #include <WiFi.h>
 #include "config.h"
 
-// Tambahkan library DHT
+// Add DHT library
 #include <DHT.h>
 #ifndef DHT22_PIN
 #define DHT22_PIN 4
@@ -92,8 +92,8 @@ public:
     doc.clear();
 
     // Version and timestamp
-    doc["version"] = "add_your_version";
-    doc["ts"] = "your_time_stamp"; // TODO: Use actual timestamp
+    doc["version"] = "1.2";
+    doc["ts"] = "2025-09-22T14:20:15Z"; // TODO: Use actual timestamp
     doc["seq"] = 141463; // TODO: Increment sequence number
     doc["tenant"] = "hospital-abc";
 
@@ -102,10 +102,10 @@ public:
     device["id"] = DEVICE_ID;
     device["type"] = "esp32";
     device["fw"] = "2.1.0";
-    device["name"] = "name_your_board";
+    device["name"] = "IoT Multi-Board A";
 
     JsonObject location = device["location"].to<JsonObject>();
-    location["room"] = "your_room";
+    location["room"] = "ICU-01";
     location["lat"] = -6.2;
     location["lng"] = 106.8;
     location["alt_m"] = 45;
@@ -161,7 +161,7 @@ public:
     zmptQuality["status"] = sensor.zmptActive ? "ok" : "inactive";
     zmptQuality["calibrated"] = true;
     JsonArray zmptErrors = zmptQuality["errors"].to<JsonArray>();
-    zmptQuality["notes"] = "Sensor tegangan AC ZMPT101B untuk monitoring listrik.";
+    zmptQuality["notes"] = "AC voltage sensor ZMPT101B for electrical monitoring.";
 
     // SCT013 Current Sensor
     JsonObject sct = dataArray.add<JsonObject>();
@@ -177,7 +177,7 @@ public:
     sctQuality["status"] = sensor.sctActive ? "ok" : "inactive";
     sctQuality["calibrated"] = true;
     JsonArray sctErrors = sctQuality["errors"].to<JsonArray>();
-    sctQuality["notes"] = "Sensor arus AC SCT013 untuk monitoring beban listrik.";
+    sctQuality["notes"] = "AC current sensor SCT013 for electrical load monitoring.";
 
     // PIR Motion Sensor
     JsonObject pir = dataArray.add<JsonObject>();
@@ -193,7 +193,7 @@ public:
     pirQuality["status"] = "ok";
     pirQuality["calibrated"] = true;
     JsonArray pirErrors = pirQuality["errors"].to<JsonArray>();
-    pirQuality["notes"] = "Sensor gerak PIR HC-SR501 untuk deteksi kehadiran.";
+    pirQuality["notes"] = "PIR motion sensor HC-SR501 for presence detection.";
 
     // DHT22 Temperature & Humidity Sensor
     JsonObject dht = dataArray.add<JsonObject>();
@@ -214,7 +214,7 @@ public:
     if (!dhtValid) {
       dhtErrors.add("sensor_read_failed");
     }
-    dhtQuality["notes"] = "Sensor DHT22 untuk monitoring suhu dan kelembapan ruangan.";
+    dhtQuality["notes"] = "DHT22 sensor for room temperature and humidity monitoring.";
 
     String output;
     serializeJson(doc, output);
@@ -296,12 +296,12 @@ SensorData readSensors() {
   
   // PIR HC-SR501 motion sensor (digital input)
   pinMode(PIR_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT); // LED indikator
+  pinMode(LED_PIN, OUTPUT); // LED indicator
   data.pirMotion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
   digitalWrite(LED_PIN, data.pirMotion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
 
   // DHT22 (temperature & humidity)
-  // Pastikan dht.begin() sudah dipanggil sekali (init aman idempotent di sini)
+  // Ensure dht.begin() is called once (init is safe idempotent here)
   static bool dhtInitialized = false;
   if (!dhtInitialized) {
     dht.begin();
@@ -309,7 +309,7 @@ SensorData readSensors() {
   }
   float t = dht.readTemperature();
   float h = dht.readHumidity();
-  if (isnan(t)) t = NAN; // biarkan NAN jika gagal
+  if (isnan(t)) t = NAN; // leave NAN if failed
   if (isnan(h)) h = NAN;
   data.dhtTemperature = t;
   data.dhtHumidity = h;
@@ -347,7 +347,7 @@ WiFiData getWiFiData() {
   return data;
 }
 
-// Fungsi pembacaan PIR dan kontrol LED secara realtime
+// Function for real-time PIR reading and LED control
 void readPirRealtime() {
   bool motion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
   digitalWrite(LED_PIN, motion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);

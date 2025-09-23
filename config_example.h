@@ -6,7 +6,7 @@
 
 // WiFi Configuration - EDIT THESE VALUES
 #ifndef WIFI_SSID
-#define WIFI_SSID "your_wifi_ssid"  // Change to your WiFi SSID
+#define WIFI_SSID "your_wifi_name"  // Change to your WiFi SSID
 #endif
 
 #ifndef WIFI_PASSWORD
@@ -16,18 +16,18 @@
 // API Configuration - EDIT THESE VALUES
 // Production API (commented out)
 // #ifndef API_ENDPOINT
-// #define API_ENDPOINT "http://your_api_production"
+// #define API_ENDPOINT "your_api_endpoint"
 // #endif
 // #ifndef API_KEY
-// #define API_KEY "your_api_key"
+// #define API_KEY "your_production_api_key"
 // #endif
 
 // Development API (no security)
 #ifndef API_ENDPOINT
-#define API_ENDPOINT "your_endpoint"
+#define API_ENDPOINT "your_api_endpoint"
 #endif
 #ifndef DEVICE_ID
-#define DEVICE_ID "your_name_device"
+#define DEVICE_ID "your_device_name"
 #endif
 
 // Hardware Configuration
@@ -75,7 +75,7 @@
 // =========================
 // Threshold Configuration
 // =========================
-// Tegangan (Volt) - batas aman jaringan PLN (sesuaikan)
+// Voltage (Volt) - safe limit for PLN network (adjust as needed)
 #ifndef VOLT_MIN
 #define VOLT_MIN 180.0
 #endif
@@ -83,12 +83,12 @@
 #define VOLT_MAX 250.0
 #endif
 
-// Arus (Ampere) - arus maksimum beban (sesuaikan)
+// Current (Ampere) - maximum load current (adjust as needed)
 #ifndef CURRENT_MAX
 #define CURRENT_MAX 25.0
 #endif
 
-// Suhu & Kelembapan (DHT22)
+// Temperature & Humidity (DHT22)
 #ifndef TEMP_LOW
 #define TEMP_LOW 15.0
 #endif
@@ -102,17 +102,17 @@
 #define HUM_HIGH 80
 #endif
 
-// PIR active state (HIGH untuk HC-SR501)
+// PIR active state (HIGH for HC-SR501)
 #ifndef PIR_ACTIVE_STATE
 #define PIR_ACTIVE_STATE HIGH
 #endif
 
-// Tambahkan definisi LED indikator PIR
+// Add PIR indicator LED definition
 #ifndef LED_PIN
-#define LED_PIN 5// GPIO2 biasanya ada LED onboard ESP32
+#define LED_PIN 5// GPIO2 usually has onboard LED on ESP32
 #endif
 #ifndef LED_ACTIVE_STATE
-#define LED_ACTIVE_STATE HIGH // LED aktif HIGH
+#define LED_ACTIVE_STATE HIGH // LED active HIGH
 #endif
 
 // OLED Configuration

@@ -202,7 +202,7 @@ void setup() {
 
 void loop() {
   readPirRealtime();
-  vTaskDelay(pdMS_TO_TICKS(1)); // loop cepat untuk PIR
+  vTaskDelay(pdMS_TO_TICKS(1)); // fast loop for PIR
 }
 
 void connectWiFi() {

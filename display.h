@@ -31,7 +31,7 @@ public:
   }
   
   static void printJson(const String& json) {
-    // Tidak perlu tampilkan JSON di serial
+    // No need to display JSON in serial
   }
   
   static void printHTTP(int code) {
@@ -42,7 +42,7 @@ public:
 
   static void printSummary(const SensorData& sensor, const SystemData& system, const WiFiData& wifi) {
     if (!DEBUG_ENABLED || !Serial) return;
-    Serial.println(F("==== STATUS ENERGI ===="));
+    Serial.println(F("==== ENERGY STATUS ===="));
     Serial.print(F("V: ")); Serial.print(sensor.voltage, 1); Serial.print(F("V  "));
     Serial.print(F("I: ")); Serial.print(sensor.current, 2); Serial.print(F("A  "));
     Serial.print(F("PIR: ")); Serial.print(sensor.pirMotion ? "MOTION" : "IDLE");
