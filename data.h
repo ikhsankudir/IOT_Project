@@ -9,6 +9,14 @@
 #include <WiFi.h>
 #include "config.h"
 
+// Tambahkan library DHT
+#include <DHT.h>
+#ifndef DHT22_PIN
+#define DHT22_PIN 4
+#endif
+#define DHT_TYPE DHT22
+static DHT dht(DHT22_PIN, DHT_TYPE);
+
 //=============================================================================
 // DATA STRUCTURES - STEP 3: ADD NEW SENSOR DATA FIELDS HERE
 //=============================================================================
@@ -30,6 +38,17 @@ struct SensorData {
   // Example: float humidity;
   // Example: bool relayStatus;
   // Example: int lightLevel;
+  bool pirMotion;             // HC-SR501 PIR motion detected
+  
+  // DHT22
+  float dhtTemperature;       // Celsius
+  float dhtHumidity;          // Percent
+
+  // Threshold flags
+  bool voltageOutOfRange;     // voltage < VOLT_MIN || voltage > VOLT_MAX
+  bool currentOverlimit;      // current > CURRENT_MAX
+  bool tempOutOfRange;        // temperature outside TEMP_LOW..TEMP_HIGH
+  bool humOutOfRange;         // humidity outside HUM_LOW..HUM_HIGH
 };
 
 // System data struct  
@@ -71,63 +90,132 @@ public:
 
   String createPayload(SensorData sensor, SystemData system, WiFiData wifi) {
     doc.clear();
-    
-    //-------------------------------------------------------------------------
-    // Source ESP - System information
-    //-------------------------------------------------------------------------
-    JsonObject esp = doc["source_esp"].to<JsonObject>();
-    esp["device_id"] = DEVICE_ID;
-    esp["uptime"] = system.uptime;
-    esp["free_heap"] = system.freeHeap;
-    esp["total_heap"] = system.totalHeap;
-    esp["cpu_freq"] = system.cpuFreq;
-    
-    // ADD NEW SYSTEM FIELDS TO JSON BELOW:
-    // Example: esp["cpu_temp"] = system.cpuTemp;
-    
-    //-------------------------------------------------------------------------
-    // Sensors - All sensor readings
-    //-------------------------------------------------------------------------
-    JsonObject sensors = doc["sensors"].to<JsonObject>();
-    
+
+    // Version and timestamp
+    doc["version"] = "add_your_version";
+    doc["ts"] = "your_time_stamp"; // TODO: Use actual timestamp
+    doc["seq"] = 141463; // TODO: Increment sequence number
+    doc["tenant"] = "hospital-abc";
+
+    // Device information
+    JsonObject device = doc["device"].to<JsonObject>();
+    device["id"] = DEVICE_ID;
+    device["type"] = "esp32";
+    device["fw"] = "2.1.0";
+    device["name"] = "name_your_board";
+
+    JsonObject location = device["location"].to<JsonObject>();
+    location["room"] = "your_room";
+    location["lat"] = -6.2;
+    location["lng"] = 106.8;
+    location["alt_m"] = 45;
+
+    JsonArray tags = device["tags"].to<JsonArray>();
+    tags.add("demo");
+    tags.add("multisensor");
+    tags.add("realistic-sim");
+
+    // Network information
+    JsonObject network = doc["network"].to<JsonObject>();
+    network["conn"] = "wifi";
+    network["ip"] = wifi.ip;
+    network["rssi_dbm"] = wifi.rssi;
+    network["snr_db"] = nullptr; // null
+    network["mac"] = wifi.mac;
+
+    // Power information
+    JsonObject power = doc["power"].to<JsonObject>();
+    power["battery_pct"] = nullptr; // null for wired ESP32
+    power["voltage_v"] = 5.0;
+    power["charging"] = true;
+
+    // Resources
+    JsonObject resources = doc["resources"].to<JsonObject>();
+    resources["uptime_s"] = system.uptime;
+    resources["cpu_pct"] = 14.2; // TODO: Calculate actual CPU usage
+    resources["mem_pct"] = (float)(system.totalHeap - system.freeHeap) / system.totalHeap * 100.0;
+    resources["fs_used_pct"] = 68.5; // TODO: Calculate actual flash usage
+    resources["heap_free_kb"] = system.freeHeap / 1024;
+    resources["flash_free_kb"] = 980; // TODO: Calculate actual flash free
+    resources["temp_c"] = 41.8; // TODO: Add CPU temperature sensor
+
+    // Aggregation
+    JsonObject agg = doc["agg"].to<JsonObject>();
+    agg["window_s"] = 5;
+    agg["method"] = "raw";
+
+    // Data array with sensors
+    JsonArray dataArray = doc["data"].to<JsonArray>();
+
     // ZMPT101B Voltage Sensor
-    JsonObject zmpt = sensors["zmpt101b"].to<JsonObject>();
-    zmpt["raw"] = sensor.zmptRaw;
-    zmpt["voltage"] = sensor.voltage;
-    zmpt["active"] = sensor.zmptActive;
-    
+    JsonObject zmpt = dataArray.add<JsonObject>();
+    zmpt["sensor"] = "zmpt101b";
+    zmpt["category"] = "power";
+    zmpt["iface"] = "analog";
+    zmpt["unit_system"] = "SI";
+
+    JsonObject zmptObs = zmpt["observations"].to<JsonObject>();
+    zmptObs["voltage_v"] = sensor.voltage;
+
+    JsonObject zmptQuality = zmpt["quality"].to<JsonObject>();
+    zmptQuality["status"] = sensor.zmptActive ? "ok" : "inactive";
+    zmptQuality["calibrated"] = true;
+    JsonArray zmptErrors = zmptQuality["errors"].to<JsonArray>();
+    zmptQuality["notes"] = "Sensor tegangan AC ZMPT101B untuk monitoring listrik.";
+
     // SCT013 Current Sensor
-    JsonObject sct = sensors["sct013"].to<JsonObject>();
-    sct["raw"] = sensor.sctRaw;
-    sct["current"] = sensor.current;
-    sct["active"] = sensor.sctActive;
-    
-    // ADD NEW SENSORS TO JSON BELOW:
-    // Example:
-    // JsonObject dht = sensors["dht22"].to<JsonObject>();
-    // dht["temperature"] = sensor.temperature;
-    // dht["humidity"] = sensor.humidity;
-    //
-    // JsonObject relay = sensors["relay"].to<JsonObject>();
-    // relay["status"] = sensor.relayStatus;
-    
-    //-------------------------------------------------------------------------
-    // WiFi information
-    //-------------------------------------------------------------------------
-    JsonObject wifiObj = doc["wifi"].to<JsonObject>();
-    wifiObj["ip"] = wifi.ip;
-    wifiObj["mac"] = wifi.mac;
-    wifiObj["rssi"] = wifi.rssi;
-    wifiObj["status"] = wifi.status;
-    
-    // ADD NEW WIFI FIELDS TO JSON BELOW:
-    // Example: wifiObj["gateway"] = wifi.gateway;
-    
-    //-------------------------------------------------------------------------
-    // Timestamp
-    //-------------------------------------------------------------------------
-    doc["timestamp"] = millis();
-    
+    JsonObject sct = dataArray.add<JsonObject>();
+    sct["sensor"] = "sct013";
+    sct["category"] = "power";
+    sct["iface"] = "analog";
+    sct["unit_system"] = "SI";
+
+    JsonObject sctObs = sct["observations"].to<JsonObject>();
+    sctObs["current_a"] = sensor.current;
+
+    JsonObject sctQuality = sct["quality"].to<JsonObject>();
+    sctQuality["status"] = sensor.sctActive ? "ok" : "inactive";
+    sctQuality["calibrated"] = true;
+    JsonArray sctErrors = sctQuality["errors"].to<JsonArray>();
+    sctQuality["notes"] = "Sensor arus AC SCT013 untuk monitoring beban listrik.";
+
+    // PIR Motion Sensor
+    JsonObject pir = dataArray.add<JsonObject>();
+    pir["sensor"] = "hc-sr501";
+    pir["category"] = "motion";
+    pir["iface"] = "digital";
+    pir["unit_system"] = "SI";
+
+    JsonObject pirObs = pir["observations"].to<JsonObject>();
+    pirObs["motion_detected"] = sensor.pirMotion;
+
+    JsonObject pirQuality = pir["quality"].to<JsonObject>();
+    pirQuality["status"] = "ok";
+    pirQuality["calibrated"] = true;
+    JsonArray pirErrors = pirQuality["errors"].to<JsonArray>();
+    pirQuality["notes"] = "Sensor gerak PIR HC-SR501 untuk deteksi kehadiran.";
+
+    // DHT22 Temperature & Humidity Sensor
+    JsonObject dht = dataArray.add<JsonObject>();
+    dht["sensor"] = "dht22";
+    dht["category"] = "env";
+    dht["iface"] = "digital";
+    dht["unit_system"] = "SI";
+
+    JsonObject dhtObs = dht["observations"].to<JsonObject>();
+    dhtObs["temperature_c"] = sensor.dhtTemperature;
+    dhtObs["humidity_pct"] = sensor.dhtHumidity;
+
+    JsonObject dhtQuality = dht["quality"].to<JsonObject>();
+    bool dhtValid = !isnan(sensor.dhtTemperature) && !isnan(sensor.dhtHumidity);
+    dhtQuality["status"] = dhtValid ? "ok" : "error";
+    dhtQuality["calibrated"] = true;
+    JsonArray dhtErrors = dhtQuality["errors"].to<JsonArray>();
+    if (!dhtValid) {
+      dhtErrors.add("sensor_read_failed");
+    }
+    dhtQuality["notes"] = "Sensor DHT22 untuk monitoring suhu dan kelembapan ruangan.";
+
     String output;
     serializeJson(doc, output);
     return output;
@@ -169,6 +257,9 @@ SensorData readSensors() {
   // Check if sensor is active (has AC signal variation)
   data.zmptActive = (zmptPeakToPeak > ZMPT_THRESHOLD);
   
+  // Threshold check voltage
+  data.voltageOutOfRange = (data.voltage < VOLT_MIN || data.voltage > VOLT_MAX);
+  
   //-------------------------------------------------------------------------
   // SCT013 (Current Sensor) Reading
   //-------------------------------------------------------------------------
@@ -195,20 +286,45 @@ SensorData readSensors() {
   
   // Check if sensor is active (has AC signal variation)
   data.sctActive = (sctPeakToPeak > SCT_THRESHOLD);
+
+  // Threshold check current
+  data.currentOverlimit = (data.current > CURRENT_MAX);
   
   //-------------------------------------------------------------------------
   // ADD NEW SENSOR READINGS BELOW:
   //-------------------------------------------------------------------------
   
-  // Example: DHT22 Temperature & Humidity Sensor
-  // data.temperature = dht.readTemperature();
-  // data.humidity = dht.readHumidity();
-  
-  // Example: Digital sensors
-  // data.relayStatus = digitalRead(RELAY_PIN);
-  
-  // Example: Analog sensors  
-  // data.lightLevel = analogRead(LIGHT_SENSOR_PIN);
+  // PIR HC-SR501 motion sensor (digital input)
+  pinMode(PIR_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT); // LED indikator
+  data.pirMotion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
+  digitalWrite(LED_PIN, data.pirMotion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
+
+  // DHT22 (temperature & humidity)
+  // Pastikan dht.begin() sudah dipanggil sekali (init aman idempotent di sini)
+  static bool dhtInitialized = false;
+  if (!dhtInitialized) {
+    dht.begin();
+    dhtInitialized = true;
+  }
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  if (isnan(t)) t = NAN; // biarkan NAN jika gagal
+  if (isnan(h)) h = NAN;
+  data.dhtTemperature = t;
+  data.dhtHumidity = h;
+
+  // Threshold checks for DHT only when valid
+  if (!isnan(t)) {
+    data.tempOutOfRange = (t < TEMP_LOW || t > TEMP_HIGH);
+  } else {
+    data.tempOutOfRange = false;
+  }
+  if (!isnan(h)) {
+    data.humOutOfRange = (h < HUM_LOW || h > HUM_HIGH);
+  } else {
+    data.humOutOfRange = false;
+  }
   
   return data;
 }
@@ -229,6 +345,12 @@ WiFiData getWiFiData() {
   data.rssi = WiFi.RSSI();
   data.status = WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
   return data;
+}
+
+// Fungsi pembacaan PIR dan kontrol LED secara realtime
+void readPirRealtime() {
+  bool motion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
+  digitalWrite(LED_PIN, motion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
 }
 
 #endif

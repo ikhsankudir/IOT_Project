@@ -31,15 +31,30 @@ public:
   }
   
   static void printJson(const String& json) {
-    if (DEBUG_ENABLED && Serial) {
-      Serial.println("TX: " + json);
-    }
+    // Tidak perlu tampilkan JSON di serial
   }
   
   static void printHTTP(int code) {
     if (DEBUG_ENABLED && Serial) {
       Serial.println(code == 200 ? "HTTP: OK" : "HTTP: ERR");
     }
+  }
+
+  static void printSummary(const SensorData& sensor, const SystemData& system, const WiFiData& wifi) {
+    if (!DEBUG_ENABLED || !Serial) return;
+    Serial.println(F("==== STATUS ENERGI ===="));
+    Serial.print(F("V: ")); Serial.print(sensor.voltage, 1); Serial.print(F("V  "));
+    Serial.print(F("I: ")); Serial.print(sensor.current, 2); Serial.print(F("A  "));
+    Serial.print(F("PIR: ")); Serial.print(sensor.pirMotion ? "MOTION" : "IDLE");
+    Serial.println();
+    Serial.print(F("T: "));
+    if (!isnan(sensor.dhtTemperature)) Serial.print(sensor.dhtTemperature, 1); else Serial.print("-");
+    Serial.print(F("C  H: "));
+    if (!isnan(sensor.dhtHumidity)) Serial.print(sensor.dhtHumidity, 0); else Serial.print("-");
+    Serial.println(F("%"));
+    Serial.print(F("WiFi: ")); Serial.print(wifi.status); Serial.print(F("  RSSI: ")); Serial.println(wifi.rssi);
+    Serial.print(F("Uptime: ")); Serial.print(system.uptime); Serial.print(F("s  RAM: ")); Serial.print(system.freeHeap / 1024); Serial.println(F("KB"));
+    Serial.println(F("======================"));
   }
 };
 
@@ -104,6 +119,10 @@ public:
     //-------------------------------------------------------------------------
     // ADD NEW SENSOR DISPLAYS BELOW:
     //-------------------------------------------------------------------------
+    
+    // PIR Motion
+    display.print("PIR: ");
+    display.println(sensor.pirMotion ? "MOTION" : "IDLE");
     
     // Example: Temperature & Humidity
     // display.print("T: ");
