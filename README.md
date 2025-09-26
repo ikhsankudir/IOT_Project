@@ -16,10 +16,11 @@ This project is an IoT monitoring system with features:
 ## 🔧 Hardware Components
 
 ### Sensor Array
-- **ZMPT101B**: AC voltage sensor (Pin 35) - Electrical monitoring
-- **SCT013**: AC current sensor (Pin 34) - Load monitoring
+- **PZEM-004T**: AC power meter with voltage, current, power, energy (RX:16, TX:17) - Comprehensive electrical monitoring
 - **HC-SR501 PIR**: Motion sensor (Pin 23) - Presence detection
 - **DHT22**: Temperature & humidity sensor (Pin 4) - Environmental monitoring
+- **IR Proximity Sensor**: Obstacle detection (Pin 25) - Proximity monitoring
+- **RCWL-0516**: Microwave radar motion sensor (Pin 26) - Advanced motion detection
 - **ESP32**: Main microcontroller with dual-core
 - **OLED SSD1306**: 128x64 I2C display (SDA:21, SCL:22)
 
@@ -35,7 +36,7 @@ This project is an IoT monitoring system with features:
 
 ### Development API (Current)
 ```c
-#define API_ENDPOINT "your_api_endpoint"
+#define API_ENDPOINT "your_endpoint"
 // No authentication required
 ```
 
@@ -70,7 +71,7 @@ This project is an IoT monitoring system with features:
     "ip": "10.10.10.10",
     "rssi_dbm": -57,
     "snr_db": null,
-    "mac": "24:6F:28:AA:BB:CC"
+    "mac": "24:6F:28:65:BB:CC"
   },
   "power": {
     "battery_pct": null,
@@ -92,20 +93,19 @@ This project is an IoT monitoring system with features:
   },
   "data": [
     {
-      "sensor": "zmpt101b",
+      "sensor": "pzem-004t",
       "category": "power",
-      "iface": "analog",
+      "iface": "serial",
       "unit_system": "SI",
-      "observations": {"voltage_v": 220.5},
-      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "..."}
-    },
-    {
-      "sensor": "sct013",
-      "category": "power",
-      "iface": "analog",
-      "unit_system": "SI",
-      "observations": {"current_a": 2.3},
-      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "..."}
+      "observations": {
+        "voltage_v": 212.0,
+        "current_a": 0.11,
+        "power_w": 14.4,
+        "energy_kwh": 0.065,
+        "frequency_hz": 50.0,
+        "power_factor": 0.95
+      },
+      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "PZEM-004T power meter dengan split CT untuk monitoring listrik komprehensif."}
     },
     {
       "sensor": "hc-sr501",
@@ -113,7 +113,7 @@ This project is an IoT monitoring system with features:
       "iface": "digital",
       "unit_system": "SI",
       "observations": {"motion_detected": false},
-      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "..."}
+      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "Sensor gerak PIR HC-SR501 untuk deteksi kehadiran."}
     },
     {
       "sensor": "dht22",
@@ -121,7 +121,23 @@ This project is an IoT monitoring system with features:
       "iface": "digital",
       "unit_system": "SI",
       "observations": {"temperature_c": 24.2, "humidity_pct": 51.6},
-      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "..."}
+      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "Sensor DHT22 untuk monitoring suhu dan kelembapan ruangan."}
+    },
+    {
+      "sensor": "ir-proximity",
+      "category": "proximity",
+      "iface": "digital",
+      "unit_system": "SI",
+      "observations": {"obstacle_detected": false},
+      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "Sensor IR proximity untuk deteksi obstacle/hambatan."}
+    },
+    {
+      "sensor": "rcwl-0516",
+      "category": "motion",
+      "iface": "digital",
+      "unit_system": "SI",
+      "observations": {"motion_detected": false},
+      "quality": {"status": "ok", "calibrated": true, "errors": [], "notes": "Sensor radar gelombang mikro RCWL-0516 untuk deteksi gerakan."}
     }
   ]
 }
@@ -153,8 +169,7 @@ This project is an IoT monitoring system with features:
 4. **Upload code** to ESP32
 
 ### 3. Sensor Calibration
-- **ZMPT101B**: Adjust `VOLTAGE_CALIBRATION` (default: 250.0)
-- **SCT013**: Adjust `CURRENT_CALIBRATION` (default: 30.0)
+- **PZEM-004T**: No calibration needed - factory calibrated
 - **Thresholds**: Adjust safety limits in config.h
 
 ## 📊 Monitoring & Display
@@ -163,20 +178,20 @@ This project is an IoT monitoring system with features:
 ```
 ESP32 Monitor          W H
 ----------------
-V: 220V ON
-I: 2.3A ON
-PIR: IDLE
-RAM: 176KB
-Up: 123s
+V:212.0V I:0.11A
+T:24.2C H:52%
+PIR:NO IR:NO
+PWR:OK STATUS:NORMAL
 ```
 
 ### Serial Debug Output
 ```
 ==== STATUS ENERGI ====
-V: 220.5V  I: 2.30A  PIR: IDLE
+V: 212.0V  I: 0.11A  P: 14.4W  E: 0.065kWh
+PIR: IDLE
 T: 24.2C  H: 52%
-WiFi: connected  RSSI: -57
-Uptime: 123s  RAM: 176KB
+WiFi: connected  RSSI: -47
+Uptime: 1339s  RAM: 188KB
 ```
 
 ## 🔄 FreeRTOS Task Architecture

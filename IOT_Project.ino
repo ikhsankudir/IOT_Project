@@ -10,6 +10,7 @@
 
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <PZEM004Tv30.h>  // PZEM-004T library
 #include "config.h"
 #include "data.h"
 #include "display.h"
@@ -26,6 +27,9 @@ HTTPClient http;
 // ADD NEW SENSOR OBJECTS BELOW:
 // Example: DHT dht(DHT22_PIN, DHT22);
 // Example: Servo myServo;
+
+// PZEM-004T Power Meter
+PZEM004Tv30 pzem(Serial2, PZEM_RX_PIN, PZEM_TX_PIN);
 
 // Timing & status variables (shared state)
 unsigned long lastSend = 0, lastDisplay = 0;
@@ -165,17 +169,21 @@ void setup() {
   //-------------------------------------------------------------------------
   // ADD NEW SENSOR INITIALIZATION BELOW:
   //-------------------------------------------------------------------------
-  
+
   // Example: DHT sensor
   // dht.begin();
-  
+
   // Example: Pin modes for digital sensors
   // pinMode(RELAY_PIN, OUTPUT);
   // pinMode(LED_PIN, OUTPUT);
-  
+
   // Example: Servo initialization
   // myServo.attach(SERVO_PIN);
-  
+
+  // PZEM-004T initialization
+  Serial2.begin(9600, SERIAL_8N1, PZEM_RX_PIN, PZEM_TX_PIN);
+  delay(1000); // Allow PZEM to initialize
+
   //-------------------------------------------------------------------------
   // WiFi connection (keep at end)
   //-------------------------------------------------------------------------
@@ -202,7 +210,8 @@ void setup() {
 
 void loop() {
   readPirRealtime();
-  vTaskDelay(pdMS_TO_TICKS(1)); // fast loop for PIR
+  readRcwlRealtime();
+  vTaskDelay(pdMS_TO_TICKS(1)); // loop cepat untuk PIR dan RCWL
 }
 
 void connectWiFi() {

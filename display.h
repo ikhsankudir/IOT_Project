@@ -31,7 +31,7 @@ public:
   }
   
   static void printJson(const String& json) {
-    // No need to display JSON in serial
+    // Tidak perlu tampilkan JSON di serial
   }
   
   static void printHTTP(int code) {
@@ -42,9 +42,11 @@ public:
 
   static void printSummary(const SensorData& sensor, const SystemData& system, const WiFiData& wifi) {
     if (!DEBUG_ENABLED || !Serial) return;
-    Serial.println(F("==== ENERGY STATUS ===="));
-    Serial.print(F("V: ")); Serial.print(sensor.voltage, 1); Serial.print(F("V  "));
-    Serial.print(F("I: ")); Serial.print(sensor.current, 2); Serial.print(F("A  "));
+    Serial.println(F("==== STATUS ENERGI ===="));
+    Serial.print(F("V: ")); Serial.print(sensor.pzemVoltage, 1); Serial.print(F("V  "));
+    Serial.print(F("I: ")); Serial.print(sensor.pzemCurrent, 2); Serial.print(F("A  "));
+    Serial.print(F("P: ")); Serial.print(sensor.pzemPower, 1); Serial.print(F("W  "));
+    Serial.print(F("E: ")); Serial.print(sensor.pzemEnergy, 3); Serial.println(F("kWh"));
     Serial.print(F("PIR: ")); Serial.print(sensor.pirMotion ? "MOTION" : "IDLE");
     Serial.println();
     Serial.print(F("T: "));
@@ -88,66 +90,63 @@ public:
   void update(SensorData sensor, SystemData system, WiFiData wifi, bool httpOK) {
     display.clearDisplay();
     display.setCursor(0, 0);
-    
+
     //-------------------------------------------------------------------------
-    // Header with status indicators
+    // Header with status
     //-------------------------------------------------------------------------
     display.print("ESP32 Monitor");
     display.setCursor(100, 0);
-    display.print(wifi.status == "connected" ? "W" : "X");  // WiFi status
-    display.print(httpOK ? "H" : "X");                      // HTTP status
-    
-    // Line separator
-    display.setCursor(0, 10);
-    display.println("----------------");
-    
+    display.print(wifi.status == "connected" ? "W" : "X");
+    display.print(httpOK ? "H" : "X");
+
     //-------------------------------------------------------------------------
-    // Current Sensors Display
+    // Power readings
     //-------------------------------------------------------------------------
-    // ZMPT Voltage Sensor
-    display.print("V: ");
-    display.print(sensor.voltage, 0);
-    display.print("V ");
-    display.println(sensor.zmptActive ? "ON" : "OFF");
-    
-    // SCT Current Sensor
-    display.print("I: ");
-    display.print(sensor.current, 1);
-    display.print("A ");
-    display.println(sensor.sctActive ? "ON" : "OFF");
-    
+    display.setCursor(0, 9);
+    display.printf("V:%.1fV I:%.2fA", sensor.pzemVoltage, sensor.pzemCurrent);
+
     //-------------------------------------------------------------------------
-    // ADD NEW SENSOR DISPLAYS BELOW:
+    // Environment readings
     //-------------------------------------------------------------------------
-    
-    // PIR Motion
-    display.print("PIR: ");
-    display.println(sensor.pirMotion ? "MOTION" : "IDLE");
-    
-    // Example: Temperature & Humidity
-    // display.print("T: ");
-    // display.print(sensor.temperature, 1);
-    // display.println("C");
-    //
-    // display.print("H: ");
-    // display.print(sensor.humidity, 0);
-    // display.println("%");
-    
-    // Example: Digital status
-    // display.print("Relay: ");
-    // display.println(sensor.relayStatus ? "ON" : "OFF");
-    
+    display.setCursor(0, 18);
+    if (!isnan(sensor.dhtTemperature) && !isnan(sensor.dhtHumidity)) {
+      display.printf("T:%.1fC H:%d%%", sensor.dhtTemperature, (int)sensor.dhtHumidity);
+    } else {
+      display.print("T:-- H:--");
+    }
+
     //-------------------------------------------------------------------------
-    // System Information (Keep at bottom)
+    // Motion sensors
     //-------------------------------------------------------------------------
-    display.print("RAM: ");
-    display.print(system.freeHeap / 1024);
-    display.println("KB");
-    
-    display.print("Up: ");
-    display.print(system.uptime);
-    display.println("s");
-    
+    display.setCursor(0, 27);
+    display.print("PIR:");
+    display.print(sensor.pirMotion ? "YES" : "NO");
+    display.setCursor(50, 27);
+    display.print("IR:");
+    display.print(sensor.irDetected ? "YES" : "NO");
+
+    //-------------------------------------------------------------------------
+    // System info
+    //-------------------------------------------------------------------------
+    display.setCursor(0, 36);
+    display.printf("RAM:%dKB Up:%ds", system.freeHeap / 1024, system.uptime);
+
+    //-------------------------------------------------------------------------
+    // Status indicators
+    //-------------------------------------------------------------------------
+    display.setCursor(0, 45);
+    display.print("PWR:");
+    display.print(sensor.pzemActive ? "OK" : "ERR");
+
+    display.setCursor(0, 54);
+    if (sensor.voltageOutOfRange || sensor.currentOverlimit) {
+      display.print("ALERT: ");
+      if (sensor.voltageOutOfRange) display.print("V ");
+      if (sensor.currentOverlimit) display.print("I ");
+    } else {
+      display.print("STATUS: NORMAL");
+    }
+
     display.display();
   }
   

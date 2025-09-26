@@ -6,28 +6,28 @@
 
 // WiFi Configuration - EDIT THESE VALUES
 #ifndef WIFI_SSID
-#define WIFI_SSID "your_wifi_name"  // Change to your WiFi SSID
+#define WIFI_SSID "your_ssid"  // Change to your WiFi SSID
 #endif
 
 #ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD "your_wifi_password"  // Change to your WiFi password
+#define WIFI_PASSWORD "pass"  // Change to your WiFi password
 #endif
 
 // API Configuration - EDIT THESE VALUES
 // Production API (commented out)
 // #ifndef API_ENDPOINT
-// #define API_ENDPOINT "your_api_endpoint"
+// #define API_ENDPOINT "endpoint"
 // #endif
 // #ifndef API_KEY
-// #define API_KEY "your_production_api_key"
+// #define API_KEY "api_key"
 // #endif
 
 // Development API (no security)
 #ifndef API_ENDPOINT
-#define API_ENDPOINT "your_api_endpoint"
+#define API_ENDPOINT "endpoint"
 #endif
 #ifndef DEVICE_ID
-#define DEVICE_ID "your_device_name"
+#define DEVICE_ID "esp32-5d671568"
 #endif
 
 // Hardware Configuration
@@ -53,6 +53,34 @@
 #define DHT22_PIN 4
 #endif
 
+// IR Sensor Pin (IR proximity sensor)
+#ifndef IR_PIN
+#define IR_PIN 25
+#endif
+
+// IR Sensor LED Pin
+#ifndef IR_LED_PIN
+#define IR_LED_PIN 19
+#endif
+
+// RCWL-0516 Microwave Radar Sensor Pin
+#ifndef RCWL0516_PIN
+#define RCWL0516_PIN 26
+#endif
+
+// RCWL-0516 LED Pin
+#ifndef RCWL_LED_PIN
+#define RCWL_LED_PIN 18
+#endif
+
+// PZEM-004T Serial Pins (swapped to fix communication)
+#ifndef PZEM_RX_PIN
+#define PZEM_RX_PIN 17
+#endif
+#ifndef PZEM_TX_PIN
+#define PZEM_TX_PIN 16
+#endif
+
 // Calibration Defaults
 #ifndef DEFAULT_VOLT_CAL
 #define DEFAULT_VOLT_CAL 1.0
@@ -75,7 +103,7 @@
 // =========================
 // Threshold Configuration
 // =========================
-// Voltage (Volt) - safe limit for PLN network (adjust as needed)
+// Tegangan (Volt) - batas aman jaringan PLN (sesuaikan)
 #ifndef VOLT_MIN
 #define VOLT_MIN 180.0
 #endif
@@ -83,12 +111,12 @@
 #define VOLT_MAX 250.0
 #endif
 
-// Current (Ampere) - maximum load current (adjust as needed)
+// Arus (Ampere) - arus maksimum beban (sesuaikan)
 #ifndef CURRENT_MAX
 #define CURRENT_MAX 25.0
 #endif
 
-// Temperature & Humidity (DHT22)
+// Suhu & Kelembapan (DHT22)
 #ifndef TEMP_LOW
 #define TEMP_LOW 15.0
 #endif
@@ -102,17 +130,17 @@
 #define HUM_HIGH 80
 #endif
 
-// PIR active state (HIGH for HC-SR501)
+// PIR active state (HIGH untuk HC-SR501)
 #ifndef PIR_ACTIVE_STATE
 #define PIR_ACTIVE_STATE HIGH
 #endif
 
-// Add PIR indicator LED definition
+// Tambahkan definisi LED indikator PIR
 #ifndef LED_PIN
-#define LED_PIN 5// GPIO2 usually has onboard LED on ESP32
+#define LED_PIN 5// GPIO2 biasanya ada LED onboard ESP32
 #endif
 #ifndef LED_ACTIVE_STATE
-#define LED_ACTIVE_STATE HIGH // LED active HIGH
+#define LED_ACTIVE_STATE HIGH // LED aktif HIGH
 #endif
 
 // OLED Configuration

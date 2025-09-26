@@ -9,7 +9,7 @@
 #include <WiFi.h>
 #include "config.h"
 
-// Add DHT library
+// Tambahkan library DHT
 #include <DHT.h>
 #ifndef DHT22_PIN
 #define DHT22_PIN 4
@@ -17,22 +17,34 @@
 #define DHT_TYPE DHT22
 static DHT dht(DHT22_PIN, DHT_TYPE);
 
+// PZEM-004T extern declaration
+extern PZEM004Tv30 pzem;
+
 //=============================================================================
 // DATA STRUCTURES - STEP 3: ADD NEW SENSOR DATA FIELDS HERE
 //=============================================================================
 
 // Raw sensor data struct
 struct SensorData {
-  // ZMPT101B Voltage Sensor
-  int zmptRaw;
-  float voltage;              // Calculated voltage
-  bool zmptActive;
-  
-  // SCT013 Current Sensor  
-  int sctRaw;
-  float current;              // Calculated current
-  bool sctActive;
-  
+  // ZMPT101B Voltage Sensor (commented out - replaced by PZEM)
+  // int zmptRaw;
+  // float voltage;              // Calculated voltage
+  // bool zmptActive;
+
+  // SCT013 Current Sensor (commented out - replaced by PZEM)
+  // int sctRaw;
+  // float current;              // Calculated current
+  // bool sctActive;
+
+  // PZEM-004T Power Meter
+  float pzemVoltage;          // Voltage (V)
+  float pzemCurrent;          // Current (A)
+  float pzemPower;            // Power (W)
+  float pzemEnergy;           // Energy (kWh)
+  float pzemFrequency;        // Frequency (Hz)
+  float pzemPowerFactor;      // Power Factor
+  bool pzemActive;            // PZEM communication status
+
   // ADD NEW SENSOR FIELDS BELOW:
   // Example: float temperature;
   // Example: float humidity;
@@ -43,6 +55,12 @@ struct SensorData {
   // DHT22
   float dhtTemperature;       // Celsius
   float dhtHumidity;          // Percent
+
+  // IR Proximity Sensor
+  bool irDetected;            // IR obstacle detected
+
+  // RCWL-0516 Microwave Radar Sensor
+  bool rcwlMotion;            // RCWL-0516 motion detected
 
   // Threshold flags
   bool voltageOutOfRange;     // voltage < VOLT_MIN || voltage > VOLT_MAX
@@ -147,37 +165,29 @@ public:
     // Data array with sensors
     JsonArray dataArray = doc["data"].to<JsonArray>();
 
-    // ZMPT101B Voltage Sensor
-    JsonObject zmpt = dataArray.add<JsonObject>();
-    zmpt["sensor"] = "zmpt101b";
-    zmpt["category"] = "power";
-    zmpt["iface"] = "analog";
-    zmpt["unit_system"] = "SI";
+    // PZEM-004T Power Meter
+    JsonObject pzem = dataArray.add<JsonObject>();
+    pzem["sensor"] = "pzem-004t";
+    pzem["category"] = "power";
+    pzem["iface"] = "serial";
+    pzem["unit_system"] = "SI";
 
-    JsonObject zmptObs = zmpt["observations"].to<JsonObject>();
-    zmptObs["voltage_v"] = sensor.voltage;
+    JsonObject pzemObs = pzem["observations"].to<JsonObject>();
+    pzemObs["voltage_v"] = sensor.pzemVoltage;
+    pzemObs["current_a"] = sensor.pzemCurrent;
+    pzemObs["power_w"] = sensor.pzemPower;
+    pzemObs["energy_kwh"] = sensor.pzemEnergy;
+    pzemObs["frequency_hz"] = sensor.pzemFrequency;
+    pzemObs["power_factor"] = sensor.pzemPowerFactor;
 
-    JsonObject zmptQuality = zmpt["quality"].to<JsonObject>();
-    zmptQuality["status"] = sensor.zmptActive ? "ok" : "inactive";
-    zmptQuality["calibrated"] = true;
-    JsonArray zmptErrors = zmptQuality["errors"].to<JsonArray>();
-    zmptQuality["notes"] = "AC voltage sensor ZMPT101B for electrical monitoring.";
-
-    // SCT013 Current Sensor
-    JsonObject sct = dataArray.add<JsonObject>();
-    sct["sensor"] = "sct013";
-    sct["category"] = "power";
-    sct["iface"] = "analog";
-    sct["unit_system"] = "SI";
-
-    JsonObject sctObs = sct["observations"].to<JsonObject>();
-    sctObs["current_a"] = sensor.current;
-
-    JsonObject sctQuality = sct["quality"].to<JsonObject>();
-    sctQuality["status"] = sensor.sctActive ? "ok" : "inactive";
-    sctQuality["calibrated"] = true;
-    JsonArray sctErrors = sctQuality["errors"].to<JsonArray>();
-    sctQuality["notes"] = "AC current sensor SCT013 for electrical load monitoring.";
+    JsonObject pzemQuality = pzem["quality"].to<JsonObject>();
+    pzemQuality["status"] = sensor.pzemActive ? "ok" : "error";
+    pzemQuality["calibrated"] = true;
+    JsonArray pzemErrors = pzemQuality["errors"].to<JsonArray>();
+    if (!sensor.pzemActive) {
+      pzemErrors.add("communication_failed");
+    }
+    pzemQuality["notes"] = "PZEM-004T power meter dengan split CT untuk monitoring listrik komprehensif.";
 
     // PIR Motion Sensor
     JsonObject pir = dataArray.add<JsonObject>();
@@ -193,7 +203,7 @@ public:
     pirQuality["status"] = "ok";
     pirQuality["calibrated"] = true;
     JsonArray pirErrors = pirQuality["errors"].to<JsonArray>();
-    pirQuality["notes"] = "PIR motion sensor HC-SR501 for presence detection.";
+    pirQuality["notes"] = "Sensor gerak PIR HC-SR501 untuk deteksi kehadiran.";
 
     // DHT22 Temperature & Humidity Sensor
     JsonObject dht = dataArray.add<JsonObject>();
@@ -214,7 +224,39 @@ public:
     if (!dhtValid) {
       dhtErrors.add("sensor_read_failed");
     }
-    dhtQuality["notes"] = "DHT22 sensor for room temperature and humidity monitoring.";
+    dhtQuality["notes"] = "Sensor DHT22 untuk monitoring suhu dan kelembapan ruangan.";
+
+    // IR Proximity Sensor
+    JsonObject ir = dataArray.add<JsonObject>();
+    ir["sensor"] = "ir-proximity";
+    ir["category"] = "proximity";
+    ir["iface"] = "digital";
+    ir["unit_system"] = "SI";
+
+    JsonObject irObs = ir["observations"].to<JsonObject>();
+    irObs["obstacle_detected"] = sensor.irDetected;
+
+    JsonObject irQuality = ir["quality"].to<JsonObject>();
+    irQuality["status"] = "ok";
+    irQuality["calibrated"] = true;
+    JsonArray irErrors = irQuality["errors"].to<JsonArray>();
+    irQuality["notes"] = "Sensor IR proximity untuk deteksi obstacle/hambatan.";
+
+    // RCWL-0516 Microwave Radar Sensor
+    JsonObject rcwl = dataArray.add<JsonObject>();
+    rcwl["sensor"] = "rcwl-0516";
+    rcwl["category"] = "motion";
+    rcwl["iface"] = "digital";
+    rcwl["unit_system"] = "SI";
+
+    JsonObject rcwlObs = rcwl["observations"].to<JsonObject>();
+    rcwlObs["motion_detected"] = sensor.rcwlMotion;
+
+    JsonObject rcwlQuality = rcwl["quality"].to<JsonObject>();
+    rcwlQuality["status"] = "ok";
+    rcwlQuality["calibrated"] = true;
+    JsonArray rcwlErrors = rcwlQuality["errors"].to<JsonArray>();
+    rcwlQuality["notes"] = "Sensor radar gelombang mikro RCWL-0516 untuk deteksi gerakan.";
 
     String output;
     serializeJson(doc, output);
@@ -231,77 +273,122 @@ SensorData readSensors() {
   SensorData data;
   
   //-------------------------------------------------------------------------
-  // ZMPT101B (Voltage Sensor) Reading
+  // PZEM-004T Power Meter Reading
   //-------------------------------------------------------------------------
+  static int debugCount = 0;
+  debugCount++;
+  bool shouldDebug = (DEBUG_ENABLED && (debugCount % 20 == 0)); // Print every 20 readings (~1 second)
+
+  if (shouldDebug) Serial.println("Reading PZEM...");
+  // Read all parameters from PZEM-004T
+  data.pzemVoltage = pzem.voltage();
+  data.pzemCurrent = pzem.current();
+  data.pzemPower = pzem.power();
+  data.pzemEnergy = pzem.energy();
+  data.pzemFrequency = pzem.frequency();
+  data.pzemPowerFactor = pzem.pf();
+
+  // Check if PZEM communication is successful (voltage > 0 indicates valid reading)
+  data.pzemActive = (data.pzemVoltage > 0 && !isnan(data.pzemVoltage));
+  if (!data.pzemActive) {
+    if (shouldDebug) Serial.println("PZEM communication failed");
+  } else {
+    if (shouldDebug) Serial.printf("PZEM OK: V=%.1f I=%.2f P=%.1f E=%.3f\n", data.pzemVoltage, data.pzemCurrent, data.pzemPower, data.pzemEnergy);
+  }
+
+  // Threshold checks for PZEM data
+  if (data.pzemActive) {
+    data.voltageOutOfRange = (data.pzemVoltage < VOLT_MIN || data.pzemVoltage > VOLT_MAX);
+    data.currentOverlimit = (data.pzemCurrent > CURRENT_MAX);
+  } else {
+    data.voltageOutOfRange = false;
+    data.currentOverlimit = false;
+  }
+
+  //-------------------------------------------------------------------------
+  // ZMPT101B (Voltage Sensor) Reading - COMMENTED OUT
+  //-------------------------------------------------------------------------
+  /*
   long zmptSum = 0;
   int zmptMax = 0, zmptMin = 4095;
-  
+
   for(int i = 0; i < SAMPLES; i++) {
     int reading = analogRead(ZMPT101B_PIN);
     zmptSum += reading;
-    
+
     // Track min/max for AC signal detection
     if(reading > zmptMax) zmptMax = reading;
     if(reading < zmptMin) zmptMin = reading;
-    
+
     delay(1);
   }
-  
+
   data.zmptRaw = zmptSum / SAMPLES;
-  
+
   // Calculate RMS voltage (simplified)
   int zmptPeakToPeak = zmptMax - zmptMin;
   float zmptVoltage = (zmptPeakToPeak / ADC_RESOLUTION) * ADC_REF_VOLTAGE;
   data.voltage = zmptVoltage * VOLTAGE_CALIBRATION / 2.0; // Convert to RMS
-  
+
   // Check if sensor is active (has AC signal variation)
   data.zmptActive = (zmptPeakToPeak > ZMPT_THRESHOLD);
-  
+
   // Threshold check voltage
   data.voltageOutOfRange = (data.voltage < VOLT_MIN || data.voltage > VOLT_MAX);
-  
+  */
+
   //-------------------------------------------------------------------------
-  // SCT013 (Current Sensor) Reading
+  // SCT013 (Current Sensor) Reading - COMMENTED OUT
   //-------------------------------------------------------------------------
+  /*
   long sctSum = 0;
   int sctMax = 0, sctMin = 4095;
-  
+
   for(int i = 0; i < SAMPLES; i++) {
     int reading = analogRead(SCT013_PIN);
     sctSum += reading;
-    
+
     // Track min/max for AC signal detection
     if(reading > sctMax) sctMax = reading;
     if(reading < sctMin) sctMin = reading;
-    
+
     delay(1);
   }
-  
+
   data.sctRaw = sctSum / SAMPLES;
-  
+
   // Calculate RMS current (simplified)
   int sctPeakToPeak = sctMax - sctMin;
   float sctVoltage = (sctPeakToPeak / ADC_RESOLUTION) * ADC_REF_VOLTAGE;
   data.current = sctVoltage * CURRENT_CALIBRATION / 2.0; // Convert to RMS
-  
+
   // Check if sensor is active (has AC signal variation)
   data.sctActive = (sctPeakToPeak > SCT_THRESHOLD);
 
   // Threshold check current
   data.currentOverlimit = (data.current > CURRENT_MAX);
+  */
   
   //-------------------------------------------------------------------------
   // ADD NEW SENSOR READINGS BELOW:
   //-------------------------------------------------------------------------
   
-  // PIR HC-SR501 motion sensor (digital input)
+  // PIR HC-SR501 motion sensor (digital input) with false trigger prevention
   pinMode(PIR_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT); // LED indicator
-  data.pirMotion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
+  pinMode(LED_PIN, OUTPUT); // LED indikator
+
+  // False trigger prevention - read multiple times and use majority
+  int pirReadings = 0;
+  for(int i = 0; i < 3; i++) {
+    if(digitalRead(PIR_PIN) == PIR_ACTIVE_STATE) pirReadings++;
+    delay(5); // Small delay between readings
+  }
+  data.pirMotion = (pirReadings >= 2); // Majority vote: at least 2 out of 3 readings must be active
+
   digitalWrite(LED_PIN, data.pirMotion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
 
   // DHT22 (temperature & humidity)
-  // Ensure dht.begin() is called once (init is safe idempotent here)
+  // Pastikan dht.begin() sudah dipanggil sekali (init aman idempotent di sini)
   static bool dhtInitialized = false;
   if (!dhtInitialized) {
     dht.begin();
@@ -309,7 +396,7 @@ SensorData readSensors() {
   }
   float t = dht.readTemperature();
   float h = dht.readHumidity();
-  if (isnan(t)) t = NAN; // leave NAN if failed
+  if (isnan(t)) t = NAN; // biarkan NAN jika gagal
   if (isnan(h)) h = NAN;
   data.dhtTemperature = t;
   data.dhtHumidity = h;
@@ -325,7 +412,32 @@ SensorData readSensors() {
   } else {
     data.humOutOfRange = false;
   }
-  
+
+  // IR Proximity Sensor (digital input) with debouncing
+  pinMode(IR_PIN, INPUT);
+
+  // Simple debouncing - read multiple times and use majority
+  int irReadings = 0;
+  for(int i = 0; i < 5; i++) {
+    if(digitalRead(IR_PIN) == LOW) irReadings++;
+    delay(10); // Small delay between readings
+  }
+  data.irDetected = (irReadings >= 3); // Majority vote: at least 3 out of 5 readings must be LOW
+
+  // RCWL-0516 Microwave Radar Sensor (digital input) with false trigger prevention
+  pinMode(RCWL0516_PIN, INPUT);
+  pinMode(RCWL_LED_PIN, OUTPUT); // RCWL LED indicator
+
+  // False trigger prevention - read multiple times and use majority
+  int rcwlReadings = 0;
+  for(int i = 0; i < 3; i++) {
+    if(digitalRead(RCWL0516_PIN) == HIGH) rcwlReadings++;
+    delay(5); // Small delay between readings
+  }
+  data.rcwlMotion = (rcwlReadings >= 2); // Majority vote: at least 2 out of 3 readings must be HIGH
+
+  digitalWrite(RCWL_LED_PIN, data.rcwlMotion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
+
   return data;
 }
 
@@ -347,10 +459,28 @@ WiFiData getWiFiData() {
   return data;
 }
 
-// Function for real-time PIR reading and LED control
+// Fungsi pembacaan PIR dan kontrol LED secara realtime dengan false trigger prevention
 void readPirRealtime() {
-  bool motion = (digitalRead(PIR_PIN) == PIR_ACTIVE_STATE);
+  // False trigger prevention - quick majority vote
+  int pirReadings = 0;
+  for(int i = 0; i < 3; i++) {
+    if(digitalRead(PIR_PIN) == PIR_ACTIVE_STATE) pirReadings++;
+    delay(2); // Very short delay for realtime response
+  }
+  bool motion = (pirReadings >= 2); // At least 2 out of 3 readings
   digitalWrite(LED_PIN, motion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
+}
+
+// Fungsi pembacaan RCWL-0516 dan kontrol LED secara realtime dengan false trigger prevention
+void readRcwlRealtime() {
+  // False trigger prevention - quick majority vote
+  int rcwlReadings = 0;
+  for(int i = 0; i < 3; i++) {
+    if(digitalRead(RCWL0516_PIN) == HIGH) rcwlReadings++;
+    delay(2); // Very short delay for realtime response
+  }
+  bool motion = (rcwlReadings >= 2); // At least 2 out of 3 readings
+  digitalWrite(RCWL_LED_PIN, motion ? LED_ACTIVE_STATE : !LED_ACTIVE_STATE);
 }
 
 #endif
